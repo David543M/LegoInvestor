@@ -46,30 +46,22 @@ export default function Navbar() {
               <div className="h-10 w-10 bg-lego-red rounded-lg flex items-center justify-center mr-2">
                 <span className="text-white font-bold text-xs">LEGO</span>
               </div>
-              <Link href="/">
-                <span className="font-bold text-xl text-gray-900 cursor-pointer">LEGODeals</span>
+              <Link href="/" className="font-bold text-xl text-gray-900 cursor-pointer">
+                LEGODeals
               </Link>
             </div>
             <div className="hidden md:ml-6 md:flex md:space-x-8">
-              <Link href="/">
-                <a className="border-lego-red text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-                  Dashboard
-                </a>
+              <Link href="/" className="border-lego-red text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                Dashboard
               </Link>
-              <Link href="/">
-                <a className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-                  Deals
-                </a>
+              <Link href="/" className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                Deals
               </Link>
-              <Link href="/">
-                <a className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-                  Analytics
-                </a>
+              <Link href="/" className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                Analytics
               </Link>
-              <Link href="/">
-                <a className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-                  Watchlist
-                </a>
+              <Link href="/" className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                Watchlist
               </Link>
             </div>
           </div>
