@@ -35,5 +35,5 @@ export interface IStorage {
   getDealStats(): Promise<DealStats>;
 }
 
-// Re-export the dynamic implementation
-export { storage } from './storage/index.js';
+// Re-export everything from storage/index.ts
+export * from './storage/index.js';

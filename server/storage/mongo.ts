@@ -1,4 +1,4 @@
-import { IStorage } from '../storage.js';
+import { IStorage } from './index.js';
 import { isValidObjectId } from "mongoose";
 
 import type {

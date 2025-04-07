@@ -9,7 +9,7 @@ import type {
     User,
     InsertUser
   } from '../../shared/schema.js';
-  import type { IStorage } from '../storage.js';
+  import type { IStorage } from './index.js';
 
   function sanitizeLegoSet(set: InsertLegoSet): InsertLegoSet {
     return {
