@@ -70,7 +70,7 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(process.cwd(), "dist", "client");
+  const distPath = path.resolve(import.meta.dirname, "..", "client");
 
   if (!fs.existsSync(distPath)) {
     console.warn(`Trying to serve static files from ${distPath}`);

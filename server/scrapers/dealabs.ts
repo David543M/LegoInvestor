@@ -1,147 +1,155 @@
-import puppeteer, { type Page } from "puppeteer";
-import { type LegoDeal } from "../../shared/schema.js";
-import { extractLegoSetNumber } from "./utils.js";
+import puppeteer from 'puppeteer';
+import { InsertLegoDeal, InsertLegoSet } from '../../shared/schema.js';
+import { storage } from '../storage.js';
+import * as cheerio from 'cheerio';
 
-export async function scrapeDealabs(): Promise<LegoDeal[]> {
-  console.log("Lancement du navigateur pour Dealabs...");
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-accelerated-2d-canvas",
-      "--disable-gpu",
-      "--window-size=1920x1080",
-    ],
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
-  });
-
+export async function scrapeDealabs(): Promise<InsertLegoDeal[]> {
+  const deals: InsertLegoDeal[] = [];
+  
   try {
-    console.log("Configuration du navigateur...");
+    console.log("🔍 Scraping Dealabs...");
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--disable-gpu',
+        '--window-size=1920x1080'
+      ],
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH
+    });
     const page = await browser.newPage();
-    await page.setViewport({ width: 1920, height: 1080 });
-    await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+
+    // Set headers to mimic a real browser
     await page.setExtraHTTPHeaders({
-      "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
-      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-      "Sec-Fetch-Site": "same-origin",
-      "Sec-Fetch-Mode": "navigate",
-      "Sec-Fetch-User": "?1",
-      "Sec-Fetch-Dest": "document",
-      "Accept-Encoding": "gzip, deflate, br",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.5"
     });
 
-    console.log("Navigation vers Dealabs...");
-    await page.goto("https://www.dealabs.com/search?q=lego", {
+    // Navigate to LEGO deals page
+    console.log("Navigating to Dealabs...");
+    await page.goto("https://www.dealabs.com/search?q=lego&category_id=9", {
       waitUntil: "networkidle2",
-      timeout: 60000,
+      timeout: 60000
     });
 
-    // Attendre que la page soit complètement chargée
-    await page.waitForFunction(() => {
-      return document.readyState === "complete";
-    }, { timeout: 60000 });
-
-    console.log("Attente du chargement des deals...");
+    // Wait for deals to load
+    console.log("Waiting for deals to load...");
     try {
-      await page.waitForSelector(".threadGrid", { timeout: 60000 });
+      await page.waitForSelector('article', { timeout: 60000 });
     } catch (error) {
-      console.log("Erreur lors de l'attente du sélecteur principal, tentative avec un sélecteur alternatif...");
-      try {
-        await page.waitForSelector(".thread", { timeout: 30000 });
-      } catch (error) {
-        console.log("Erreur avec le sélecteur alternatif, tentative avec un autre sélecteur...");
-        await page.waitForSelector("article", { timeout: 30000 });
+      console.log("Timeout waiting for articles, trying alternative selector...");
+      await page.waitForSelector('.thread', { timeout: 60000 });
+    }
+
+    // Extract deals
+    console.log("Extracting deals...");
+    const items = await page.evaluate(() => {
+      const elements = document.querySelectorAll('article, .thread');
+      return Array.from(elements).map(element => {
+        const title = element.querySelector('h2, .thread-title, .thread-link')?.textContent?.trim() || '';
+        const priceText = element.querySelector('.thread-price, .price')?.textContent?.trim() || '';
+        
+        // Utiliser les sélecteurs spécifiques pour le prix initial et la réduction
+        const originalPriceText = element.querySelector('span[class*="text--strikethrough"]')?.textContent?.trim() || '';
+        const discountText = element.querySelector('.textBadge--green')?.textContent?.trim() || '';
+        
+        const url = element.querySelector('a[href*="dealabs.com"]')?.getAttribute('href') || '';
+        const imageUrl = element.querySelector('img')?.getAttribute('src') || 'https://placeholder.com/lego.png';
+        const isAvailable = !element.querySelector('.expired, .unavailable');
+        
+        // Extract set number from title
+        const setNumberMatch = title.match(/LEGO[^\d]*(\d+)/i);
+        const setNumber = setNumberMatch ? setNumberMatch[1] : null;
+        
+        console.log(`Processing deal: ${title}`);
+        console.log(`- Current price: ${priceText}`);
+        console.log(`- Original price: ${originalPriceText}`);
+        console.log(`- Discount: ${discountText}`);
+        
+        return {
+          title,
+          priceText,
+          originalPriceText,
+          discountText,
+          url,
+          imageUrl,
+          isAvailable,
+          setNumber
+        };
+      });
+    });
+
+    await browser.close();
+
+    // Process the scraped items
+    for (const item of items) {
+      if (item.setNumber && item.priceText) {
+        const currentPrice = parseFloat(item.priceText.replace(/[^0-9.,]/g, '').replace(',', '.'));
+        let originalPrice = currentPrice;
+        let discountPercentage = 0;
+
+        // Try to get original price from strikethrough text
+        if (item.originalPriceText) {
+          originalPrice = parseFloat(item.originalPriceText.replace(/[^0-9.,]/g, '').replace(',', '.'));
+        }
+
+        // Try to get discount percentage from badge
+        if (item.discountText) {
+          const discountMatch = item.discountText.match(/(-?\d+(?:\.\d+)?)/);
+          if (discountMatch) {
+            discountPercentage = Math.abs(parseFloat(discountMatch[1]));
+            // If we have discount but no original price, calculate it
+            if (!item.originalPriceText && discountPercentage > 0) {
+              originalPrice = currentPrice / (1 - discountPercentage / 100);
+            }
+          }
+        } else if (originalPrice > currentPrice) {
+          // Calculate discount percentage if we have original price but no badge
+          discountPercentage = ((originalPrice - currentPrice) / originalPrice) * 100;
+        }
+        
+        if (!isNaN(currentPrice) && !isNaN(originalPrice)) {
+          // Create or get the LEGO set first
+          let legoSet = await storage.getLegoSetBySetNumber(item.setNumber);
+          if (!legoSet) {
+            const newSet: InsertLegoSet = {
+              setNumber: item.setNumber,
+              name: item.title,
+              theme: "Unknown",
+              retailPrice: originalPrice,
+              imageUrl: item.imageUrl,
+              pieceCount: 0,
+              yearReleased: new Date().getFullYear(),
+              avgRating: 0,
+              numReviews: 0
+            };
+            legoSet = await storage.createLegoSet(newSet);
+          }
+
+          // Now create the deal with the LEGO set's ID
+          deals.push({
+            setId: legoSet.id.toString(),
+            source: 'Dealabs',
+            currentPrice,
+            originalPrice,
+            discountPercentage: Math.round(discountPercentage * 10) / 10, // Round to 1 decimal
+            url: item.url || '',
+            isAvailable: !!item.isAvailable,
+            isProfitable: false, // Will be calculated later
+            profitAmount: 0, // Will be calculated later
+          });
+        }
       }
     }
 
-    // Faire défiler la page pour charger plus de deals
-    console.log("Chargement de plus de deals...");
-    await autoScroll(page);
-
-    console.log("Extraction des deals...");
-    const deals = await page.evaluate(() => {
-      const dealElements = document.querySelectorAll(".threadGrid .thread, .thread, article");
-      return Array.from(dealElements).map((deal) => {
-        const title = deal.querySelector(".thread-title, h2")?.textContent?.trim() || "";
-        const priceText = deal.querySelector(".thread-price, .price")?.textContent?.trim() || "";
-        const price = parseFloat(priceText.replace(/[^0-9,]/g, "").replace(",", "."));
-        const originalPriceText = deal.querySelector(".thread-price--old, span[class*='text--strikethrough']")?.textContent?.trim() || "";
-        const originalPrice = parseFloat(originalPriceText.replace(/[^0-9,]/g, "").replace(",", "."));
-        const discountText = deal.querySelector(".thread-discount, .textBadge--green")?.textContent?.trim() || "";
-        const discount = parseFloat(discountText.replace(/[^0-9]/g, ""));
-        const url = deal.querySelector(".thread-title, h2 a")?.getAttribute("href") || "";
-        const imageUrl = deal.querySelector(".thread-image img, img")?.getAttribute("src") || "";
-
-        return {
-          title,
-          price,
-          originalPrice,
-          discount,
-          url: url.startsWith("http") ? url : `https://www.dealabs.com${url}`,
-          imageUrl,
-        };
-      });
-    });
-
-    console.log(`Nombre de deals trouvés : ${deals.length}`);
-
-    await browser.close();
-    console.log("Navigateur fermé");
-
-    // Filtrer et transformer les deals en LegoDeal
-    const legoDeals = deals
-      .filter((deal) => {
-        const setNumber = extractLegoSetNumber(deal.title);
-        const isValid = setNumber !== null && !isNaN(deal.price) && deal.price > 0;
-        if (!isValid) {
-          console.log(`Deal ignoré : ${deal.title} (prix: ${deal.price}€)`);
-        }
-        return isValid;
-      })
-      .map((deal) => {
-        const setNumber = extractLegoSetNumber(deal.title);
-        console.log(`Deal LEGO trouvé : ${deal.title} - ${deal.price}€ (${deal.originalPrice}€) -${deal.discount}%`);
-        return {
-          setId: setNumber!,
-          source: "Dealabs",
-          currentPrice: deal.price,
-          originalPrice: deal.originalPrice || deal.price,
-          discountPercentage: deal.discount || Math.round(((deal.originalPrice - deal.price) / deal.originalPrice) * 100) || 0,
-          url: deal.url,
-          isAvailable: true,
-          isProfitable: false,
-          profitAmount: 0,
-          lastChecked: new Date(),
-          createdAt: new Date(),
-        };
-      });
-
-    console.log(`Nombre de deals LEGO trouvés : ${legoDeals.length}`);
-    return legoDeals;
+    console.log(`✅ Found ${deals.length} LEGO deals on Dealabs`);
+    return deals;
   } catch (error) {
-    console.error("Erreur lors du scraping de Dealabs :", error);
-    await browser.close();
+    console.error('Error scraping Dealabs:', error);
     return [];
   }
-}
-
-async function autoScroll(page: Page): Promise<void> {
-  await page.evaluate(async () => {
-    await new Promise<void>((resolve) => {
-      let totalHeight = 0;
-      const distance = 100;
-      const timer = setInterval(() => {
-        const scrollHeight = document.documentElement.scrollHeight;
-        window.scrollBy(0, distance);
-        totalHeight += distance;
-
-        if (totalHeight >= scrollHeight) {
-          clearInterval(timer);
-          resolve();
-        }
-      }, 100);
-    });
-  });
 } 

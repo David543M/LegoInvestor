@@ -1,71 +1,102 @@
-import { type LegoDeal } from "../../shared/schema.js";
-import { extractLegoSetNumber } from "./utils.js";
-import fetch from "node-fetch";
+import puppeteer from 'puppeteer';
+import { InsertLegoDeal } from '../../shared/schema.js';
+import fetch from 'node-fetch';
 
 interface VintedItem {
-  id: number;
+  id: string;
   title: string;
   price: number;
-  url: string;
-  photo?: {
-    url: string;
-  };
 }
 
 interface VintedResponse {
   items: VintedItem[];
 }
 
-export async function scrapeVinted(): Promise<LegoDeal[]> {
-  console.log("Récupération des deals Vinted via l'API...");
+export async function getVintedAccessToken(): Promise<string> {
+  console.log("📡 Getting Vinted access token...");
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
+      '--disable-gpu',
+      '--window-size=1920x1080'
+    ],
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH
+  });
+  const page = await browser.newPage();
+
+  await page.goto("https://www.vinted.fr/", { 
+    waitUntil: "networkidle2",
+    timeout: 60000 // Augmenter le timeout à 60 secondes
+  });
+  const cookies = await page.cookies();
+  await browser.close();
+
+  const accessTokenCookie = cookies.find(cookie => cookie.name === "access_token_web");
+  if (!accessTokenCookie) {
+    throw new Error("❌ Could not get access_token_web cookie");
+  }
+
+  console.log("✅ Got Vinted access token");
+  return accessTokenCookie.value;
+}
+
+export async function scrapeVinted(): Promise<InsertLegoDeal[]> {
+  const deals: InsertLegoDeal[] = [];
   
   try {
+    const accessToken = await getVintedAccessToken();
+
+    // Make API request to Vinted
+    console.log("Making API request to Vinted...");
     const response = await fetch("https://www.vinted.fr/api/v2/catalog/items?search_text=lego&catalog[]=5&order=newest_first", {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Authorization": `Bearer ${accessToken}`,
         "Accept": "application/json",
-        "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
-        "Sec-Fetch-Site": "same-origin",
-        "Sec-Fetch-Mode": "cors",
-        "Sec-Fetch-Dest": "empty",
-        "Accept-Encoding": "gzip, deflate, br",
+        "Content-Type": "application/json"
       }
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json() as VintedResponse;
+    console.log("Processing API response...");
+
+    if (data?.items) {
+      for (const item of data.items) {
+        const title = item.title || '';
+        const price = item.price || 0;
+        const url = `https://www.vinted.fr/items/${item.id}`;
+        
+        // Extract set number from title using more permissive regex
+        const setNumberMatch = title.match(/(?:LEGO|lego|Lego)?\s*(?:set|Set|SET)?\s*#?\s*(\d{4,6})/i) || 
+                             title.match(/(\d{4,6})\s*(?:LEGO|lego|Lego)/i);
+        const setNumber = setNumberMatch ? setNumberMatch[1] : null;
+        
+        console.log(`Processing item: ${title} - ${price}€ - ${url} - Set number: ${setNumber}`);
+        
+        if (setNumber) {
+          deals.push({
+            setId: setNumber,
+            source: 'Vinted',
+            currentPrice: price,
+            originalPrice: price, // Vinted doesn't show original price
+            discountPercentage: 0,
+            url,
+            isAvailable: true,
+            isProfitable: false, // Will be calculated later
+            profitAmount: 0, // Will be calculated later
+          });
+        }
+      }
     }
 
-    const data = await response.json() as VintedResponse;
-    console.log(`Nombre d'items trouvés : ${data.items.length}`);
-
-    // Filtrer et transformer les items en LegoDeal
-    const deals = data.items
-      .filter((item) => {
-        const setNumber = extractLegoSetNumber(item.title);
-        return setNumber !== null;
-      })
-      .map((item) => {
-        const setNumber = extractLegoSetNumber(item.title);
-        return {
-          setId: setNumber!,
-          source: "Vinted",
-          currentPrice: item.price,
-          originalPrice: item.price, // Vinted n'a pas de prix original
-          discountPercentage: 0, // Vinted n'a pas de réduction
-          url: item.url,
-          isAvailable: true,
-          isProfitable: false,
-          profitAmount: 0,
-          lastChecked: new Date(),
-          createdAt: new Date(),
-        };
-      });
-
-    console.log(`Nombre de deals LEGO trouvés : ${deals.length}`);
+    console.log(`✅ Found ${deals.length} LEGO deals on Vinted`);
     return deals;
   } catch (error) {
-    console.error("Erreur lors de la récupération des deals Vinted :", error);
+    console.error('Error scraping Vinted:', error);
     return [];
   }
 } 
