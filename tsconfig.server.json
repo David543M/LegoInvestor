@@ -2,11 +2,10 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "module": "ESNext",
+    "moduleResolution": "Bundler",
     "outDir": "dist/server",
-    "target": "ESNext",
-    "isolatedModules": true,
     "noEmit": false
   },
-  "include": ["server/**/*"],
-  "exclude": ["node_modules"]
+  "include": ["server/**/*", "api/**/*"],
+  "exclude": ["node_modules", "dist", "client"]
 } 

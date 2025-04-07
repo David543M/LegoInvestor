@@ -3,8 +3,6 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { connectDB } from "./storage/mongo";
 import dotenv from "dotenv";
-import { connectToMongoDB } from "./storage/mongo";
-import { startScraping } from "./scrapers";
 
 dotenv.config({ path: "./server/Database.env" }); // ensure .env is loaded
 
