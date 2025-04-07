@@ -2,80 +2,91 @@ import { InsertLegoSet, InsertLegoDeal } from '../shared/schema.js';
 import { storage } from './storage.js';
 import { scrapeDealabs } from './scrapers/dealabs.js';
 import { scrapeVinted } from './scrapers/vinted.js';
+import { scrapeDealabsApi } from './scrapers/dealabs-api.js';
 
 // This is a simplified scraper module that would normally use actual scraping libraries like Cheerio
 // In a real implementation, this would connect to external websites and extract LEGO deal information
 
-export async function scrapeLegoDeals(): Promise<void> {
-  console.log("Starting LEGO deal scraping...");
+export async function scrapeLegoDeals(): Promise<InsertLegoDeal[]> {
+  console.log("Scraping LEGO deals from Dealabs and Vinted");
   
   try {
-    // Scrape deals from Dealabs and Vinted
-    console.log("Scraping LEGO deals from Dealabs and Vinted");
+    // Vérifier si nous sommes dans un environnement sans Chrome (comme Render)
+    const isServerEnvironment = process.env.NODE_ENV === 'production' && process.env.RENDER === 'true';
     
+    // Utiliser la méthode API pour Dealabs en production, sinon utiliser Puppeteer
+    const dealabsPromise = isServerEnvironment 
+      ? scrapeDealabsApi() 
+      : scrapeDealabs().catch(error => {
+          console.error(`Error scraping Dealabs: ${error}`);
+          // Fallback à la méthode API si Puppeteer échoue
+          return scrapeDealabsApi();
+        });
+    
+    // Essayer de scraper Vinted, mais renvoyer un tableau vide en cas d'erreur
+    const vintedPromise = scrapeVinted().catch(error => {
+      console.error(`Error scraping Vinted: ${error}`);
+      return [];
+    });
+    
+    // Attendre que tous les scrapers se terminent
     const [dealabsDeals, vintedDeals] = await Promise.all([
-      scrapeDealabs(),
-      scrapeVinted()
+      dealabsPromise,
+      vintedPromise
     ]);
-
-    // Combine all deals
+    
+    // Combiner tous les résultats
     const allDeals = [...dealabsDeals, ...vintedDeals];
     
-    // Create LEGO sets for each unique set number
-    const uniqueSetNumbers = [...new Set(allDeals.map(deal => deal.setId))];
-    for (const setNumber of uniqueSetNumbers) {
-      const existingSet = await storage.getLegoSetBySetNumber(setNumber);
-      if (!existingSet) {
-        // Create a new LEGO set with minimal information
-        const newSet: InsertLegoSet = {
-          setNumber,
-          name: `LEGO ${setNumber}`, // Basic name, could be improved with additional scraping
-          theme: "Unknown", // Could be improved with additional scraping
-          retailPrice: 0, // Will be updated when we find a better price
-          imageUrl: "https://placeholder.com/lego.png",
-          pieceCount: 0,
-          yearReleased: new Date().getFullYear(),
-          avgRating: 0,
-          numReviews: 0
-        };
-        await storage.createLegoSet(newSet);
+    console.log("Analyzing profitability of scraped LEGO deals");
+    
+    // Traiter chaque deal pour déterminer la rentabilité
+    for (const deal of allDeals) {
+      const legoSet = await storage.getLegoSetBySetNumber(deal.setId);
+      
+      if (legoSet && legoSet.retailPrice) {
+        const retailPrice = legoSet.retailPrice;
+        const currentPrice = deal.currentPrice;
+        
+        // Vérifier si le deal est disponible et rentable
+        deal.isAvailable = true;
+        deal.isProfitable = currentPrice < retailPrice;
+        deal.profitAmount = deal.isProfitable ? retailPrice - currentPrice : 0;
+      }
+      
+      try {
+        await storage.createLegoDeal(deal);
+      } catch (error) {
+        console.error(`Failed to save deal for set ${deal.setId}: ${error}`);
       }
     }
     
-    // Analyze profitability of scraped LEGO deals
-    console.log("Analyzing profitability of scraped LEGO deals");
-    
-    // For each deal, check if it's profitable by comparing with historical data
-    for (const deal of allDeals) {
-      const historicalDeals = await storage.getDealsBySetId(deal.setId);
-      const averagePrice = historicalDeals.length > 0 ?
-        historicalDeals.reduce((sum, d) => sum + d.currentPrice, 0) / historicalDeals.length :
-        deal.originalPrice;
-      
-      // A deal is considered profitable if it's at least 20% below the average price
-      const isProfitable = deal.currentPrice < averagePrice * 0.8;
-      const profitAmount = isProfitable ? averagePrice - deal.currentPrice : 0;
-      
-      // Update deal with profitability information
-      await storage.createLegoDeal({
-        ...deal,
-        isProfitable,
-        profitAmount
-      });
-    }
-    
     console.log("LEGO deal scraping completed successfully");
+    return allDeals;
   } catch (error) {
-    console.error("Error during LEGO deal scraping:", error);
+    console.error(`Error during LEGO deal scraping: ${error}`);
+    return [];
   }
 }
 
 // This function would be called on a schedule in a real implementation
-export async function scheduleScrapingJobs(): Promise<void> {
-  // For demo purposes, scrape once now
-  await scrapeLegoDeals();
+export async function scheduleScrapingJobs() {
+  console.log("Starting LEGO deal scraping...");
   
-  // In a real implementation, this would set up a recurring schedule
-  // For example: schedule scraping every few hours using node-cron
-  // cron.schedule('0 */3 * * *', scrapeLegoDeals);
+  try {
+    await scrapeLegoDeals();
+    
+    // Calculer les statistiques
+    const stats = await storage.getDealStats();
+    console.log(`Deal stats: ${stats.totalDeals} total, ${stats.profitableDeals} profitable, ${stats.averageProfit.toFixed(2)}€ avg profit`);
+    
+    // Programmer la prochaine exécution (toutes les 3 heures)
+    setTimeout(scheduleScrapingJobs, 3 * 60 * 60 * 1000);
+    
+  } catch (error) {
+    console.error(`Error in scraping job: ${error}`);
+    
+    // En cas d'erreur, réessayer après 30 minutes
+    setTimeout(scheduleScrapingJobs, 30 * 60 * 1000);
+  }
 }

@@ -1,65 +1,80 @@
+import puppeteer from 'puppeteer';
 import { InsertLegoDeal, InsertLegoSet } from '../../shared/schema.js';
 import { storage } from '../storage.js';
 import * as cheerio from 'cheerio';
-import fetch from 'node-fetch';
 
 export async function scrapeDealabs(): Promise<InsertLegoDeal[]> {
   const deals: InsertLegoDeal[] = [];
   
   try {
-    console.log("Fetching LEGO deals from Dealabs...");
-    
-    // Simuler un navigateur avec les headers
-    const response = await fetch("https://www.dealabs.com/search?q=lego&category_id=9", {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5"
-      }
+    const browser = await puppeteer.launch({ 
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch Dealabs page: ${response.status} ${response.statusText}`);
+    const page = await browser.newPage();
+
+    // Set headers to mimic a real browser
+    await page.setExtraHTTPHeaders({
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.5"
+    });
+
+    // Navigate to LEGO deals page
+    console.log("Navigating to Dealabs...");
+    await page.goto("https://www.dealabs.com/search?q=lego&category_id=9", {
+      waitUntil: "networkidle2",
+      timeout: 60000
+    });
+
+    // Wait for deals to load
+    console.log("Waiting for deals to load...");
+    try {
+      await page.waitForSelector('article', { timeout: 60000 });
+    } catch (error) {
+      console.log("Timeout waiting for articles, trying alternative selector...");
+      await page.waitForSelector('.thread', { timeout: 60000 });
     }
-    
-    const html = await response.text();
-    const $ = cheerio.load(html);
-    
-    // Extraire les deals avec Cheerio
-    console.log("Extracting deals with Cheerio...");
-    const items = $('article, .thread').map((i, element) => {
-      const $element = $(element);
-      const title = $element.find('h2, .thread-title, .thread-link').text().trim();
-      const priceText = $element.find('.thread-price, .price').text().trim();
-      
-      // Utiliser les sélecteurs spécifiques pour le prix initial et la réduction
-      const originalPriceText = $element.find('span[class*="text--strikethrough"]').text().trim();
-      const discountText = $element.find('.textBadge--green').text().trim();
-      
-      const url = $element.find('a[href*="dealabs.com"]').attr('href') || '';
-      const imageUrl = $element.find('img').attr('src') || 'https://placeholder.com/lego.png';
-      const isAvailable = !$element.find('.expired, .unavailable').length;
-      
-      // Extract set number from title
-      const setNumberMatch = title.match(/LEGO[^\d]*(\d+)/i);
-      const setNumber = setNumberMatch ? setNumberMatch[1] : null;
-      
-      console.log(`Processing deal: ${title}`);
-      console.log(`- Current price: ${priceText}`);
-      console.log(`- Original price: ${originalPriceText}`);
-      console.log(`- Discount: ${discountText}`);
-      
-      return {
-        title,
-        priceText,
-        originalPriceText,
-        discountText,
-        url,
-        imageUrl,
-        isAvailable,
-        setNumber
-      };
-    }).get();
+
+    // Extract deals
+    console.log("Extracting deals...");
+    const items = await page.evaluate(() => {
+      const elements = document.querySelectorAll('article, .thread');
+      return Array.from(elements).map(element => {
+        const title = element.querySelector('h2, .thread-title, .thread-link')?.textContent?.trim() || '';
+        const priceText = element.querySelector('.thread-price, .price')?.textContent?.trim() || '';
+        
+        // Utiliser les sélecteurs spécifiques pour le prix initial et la réduction
+        const originalPriceText = element.querySelector('span[class*="text--strikethrough"]')?.textContent?.trim() || '';
+        const discountText = element.querySelector('.textBadge--green')?.textContent?.trim() || '';
+        
+        const url = element.querySelector('a[href*="dealabs.com"]')?.getAttribute('href') || '';
+        const imageUrl = element.querySelector('img')?.getAttribute('src') || 'https://placeholder.com/lego.png';
+        const isAvailable = !element.querySelector('.expired, .unavailable');
+        
+        // Extract set number from title
+        const setNumberMatch = title.match(/LEGO[^\d]*(\d+)/i);
+        const setNumber = setNumberMatch ? setNumberMatch[1] : null;
+        
+        console.log(`Processing deal: ${title}`);
+        console.log(`- Current price: ${priceText}`);
+        console.log(`- Original price: ${originalPriceText}`);
+        console.log(`- Discount: ${discountText}`);
+        
+        return {
+          title,
+          priceText,
+          originalPriceText,
+          discountText,
+          url,
+          imageUrl,
+          isAvailable,
+          setNumber
+        };
+      });
+    });
+
+    await browser.close();
 
     // Process the scraped items
     for (const item of items) {

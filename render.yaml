@@ -1,34 +1,21 @@
 services:
-  - type: web
-    name: lego-investor
-    runtime: node
-    buildCommand: |
-      npm ci
-      echo "Building client..."
-      npm run build:client
-      echo "Building server..."
-      npm run build:server
-      echo "Build completed, listing files:"
-      ls -la
-      echo "Listing dist directory:"
-      ls -la dist
-      echo "Listing dist/server directory:"
-      ls -la dist/server || true
+  - name: lego-investor
+    type: web
+    env: node
+    buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
-      - key: NODE_VERSION
-        value: 20
       - key: DATABASE_URL
         sync: false # Ceci indique qu'il faut définir cette variable manuellement
     autoDeploy: true # Déploiement automatique lors des push sur la branche principale
 
   - type: static
     name: lego-investor-client
-    buildCommand: npm ci && npm run build:client
+    buildCommand: npm install && npm run build
     staticPublishPath: ./dist/client
     autoDeploy: true
     envVars:
       - key: VITE_API_URL
-        value: https://lego-investor.onrender.com 
+        value: https://lego-investor-api.onrender.com # Will be updated after API deployment 
