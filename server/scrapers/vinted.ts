@@ -2,6 +2,16 @@ import puppeteer from 'puppeteer';
 import { InsertLegoDeal } from '@shared/schema';
 import fetch from 'node-fetch';
 
+interface VintedItem {
+  id: string;
+  title: string;
+  price: number;
+}
+
+interface VintedResponse {
+  items: VintedItem[];
+}
+
 async function getVintedAccessToken() {
   console.log("📡 Getting Vinted access token...");
   const browser = await puppeteer.launch({ headless: true });
@@ -40,10 +50,10 @@ export async function scrapeVinted(): Promise<InsertLegoDeal[]> {
       }
     });
 
-    const data = await response.json();
+    const data = await response.json() as VintedResponse;
     console.log("Processing API response...");
 
-    if (data && data.items) {
+    if (data?.items) {
       for (const item of data.items) {
         const title = item.title || '';
         const price = item.price || 0;

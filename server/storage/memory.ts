@@ -181,7 +181,7 @@ import type {
       if (filter.theme && filter.theme !== "all") {
         deals = deals.filter(d => {
           const set = this.legoSets.get(Number(d.setId));
-          return set && set.theme.toLowerCase() === filter.theme!.toLowerCase();
+          return set && set.theme && set.theme.toLowerCase() === filter.theme!.toLowerCase();
         });
       }
 
@@ -200,9 +200,9 @@ import type {
           const set = this.legoSets.get(Number(d.setId));
           return (
             set &&
-            (set.name.toLowerCase().includes(q) ||
+            ((set.name && set.name.toLowerCase().includes(q)) ||
               set.setNumber.toLowerCase().includes(q) ||
-              set.theme.toLowerCase().includes(q))
+              (set.theme && set.theme.toLowerCase().includes(q)))
           );
         });
       }
