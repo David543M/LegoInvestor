@@ -98,37 +98,52 @@ export class MongoStorage implements IStorage {
   
 
   async getLegoDeals(filter: Partial<DealFilter> = {}): Promise<{ deals: LegoDealWithSet[]; total: number }> {
+    console.log("🔍 Getting LEGO deals with filter:", filter);
     const query: any = {};
 
     if (filter.profitability === "profitable") query.isProfitable = true;
     if (filter.profitability === "not-profitable") query.isProfitable = false;
     if (filter.source && filter.source !== "all") query.source = filter.source;
 
+    console.log("📊 MongoDB query:", query);
+
     const limit = filter.limit || 8;
     const page = filter.page || 1;
 
-    const [deals, total] = await Promise.all([
-        LegoDealModel.find(query)
-          .skip((page - 1) * limit)
-          .limit(limit)
-          .populate("setId")
-          .lean()
-          .exec(),
-        LegoDealModel.countDocuments(query),
-      ]);
-      
+    try {
+      const [deals, total] = await Promise.all([
+          LegoDealModel.find(query)
+            .skip((page - 1) * limit)
+            .limit(limit)
+            .populate("setId")
+            .lean()
+            .exec(),
+          LegoDealModel.countDocuments(query),
+        ]);
+        
+      console.log(`📦 Found ${deals.length} deals out of ${total} total`);
+        
       // Map deals to LegoDealWithSet[]
       const dealsWithSet: LegoDealWithSet[] = deals.map((deal: any) => {
         const legoSet = deal.setId;
-      
+        console.log("🏗️ Processing deal:", { id: deal._id, setId: legoSet?.id || legoSet?._id });
+        
         return {
           ...deal,
-          setId: legoSet.id,
-          legoSet,
+          id: deal._id.toString(),
+          setId: legoSet?._id.toString(),
+          legoSet: legoSet ? {
+            ...legoSet,
+            id: legoSet._id.toString()
+          } : null,
         };
       });
-            
-    return { deals: dealsWithSet, total };
+              
+      return { deals: dealsWithSet, total };
+    } catch (error) {
+      console.error("❌ Error getting LEGO deals:", error);
+      throw error;
+    }
   }
 
   // Add method to get available sources

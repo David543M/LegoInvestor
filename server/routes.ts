@@ -13,6 +13,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all LEGO deals with filtering
   app.get("/api/deals", async (req: Request, res: Response) => {
     try {
+      console.log("📨 Received deals request with query:", req.query);
+      
       const filter = dealFilterSchema.parse({
         profitability: req.query.profitability || 'all',
         source: req.query.source || 'all',
@@ -24,7 +26,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         limit: req.query.limit ? parseInt(req.query.limit as string) : 8
       });
       
+      console.log("🎯 Parsed filter:", filter);
+      
       const { deals, total } = await storage.getLegoDeals(filter);
+      console.log(`✅ Returning ${deals.length} deals out of ${total} total`);
+      
       res.json({
         deals,
         total,
@@ -33,6 +39,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalPages: Math.ceil(total / filter.limit)
       });
     } catch (error) {
+      console.error("❌ Error in /api/deals:", error);
       res.status(400).json({ error: "Invalid filter parameters" });
     }
   });
