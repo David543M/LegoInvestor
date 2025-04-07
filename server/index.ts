@@ -12,7 +12,7 @@ export const app = express();
 // CORS configuration
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://lego-investor-client.onrender.com']
+    ? '*'  // Accepter toutes les origines en production
     : ['http://localhost:3000'],
   credentials: true
 }));

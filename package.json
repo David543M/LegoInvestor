@@ -9,7 +9,7 @@
     "build:server": "tsc --project tsconfig.server.json",
     "build": "npm run build:client && npm run build:server",
     "start": "node dist/server/index.js",
-    "start:api": "NODE_ENV=production node dist/server/index.js",
+    "start:api": "cross-env NODE_ENV=production node dist/server/index.js",
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "seed": "tsx server/seed.ts"
@@ -107,6 +107,7 @@
     "zod-validation-error": "^3.4.0"
   },
   "devDependencies": {
+    "cross-env": "^7.0.3",
     "esbuild": "^0.25.0",
     "tsx": "^4.19.1",
     "typescript": "5.6.3"
