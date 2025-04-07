@@ -1,4 +1,3 @@
-import puppeteer from 'puppeteer';
 import { InsertLegoDeal } from '../../shared/schema.js';
 import fetch from 'node-fetch';
 
@@ -12,53 +11,49 @@ interface VintedResponse {
   items: VintedItem[];
 }
 
-async function getVintedAccessToken(): Promise<string> {
-  console.log("📡 Getting Vinted access token...");
-  
-  const browser = await puppeteer.launch({ 
-    headless: true,
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
-  const page = await browser.newPage();
-
-  await page.goto("https://www.vinted.fr/", { 
-    waitUntil: "networkidle2",
-    timeout: 60000 // Augmenter le timeout à 60 secondes
-  });
-  const cookies = await page.cookies();
-  await browser.close();
-
-  const accessTokenCookie = cookies.find(cookie => cookie.name === "access_token_web");
-  if (!accessTokenCookie) {
-    throw new Error("❌ Could not get access_token_web cookie");
-  }
-
-  console.log("✅ Got Vinted access token");
-  return accessTokenCookie.value;
-}
-
+// Fonction alternative pour scraper Vinted sans Puppeteer
 export async function scrapeVinted(): Promise<InsertLegoDeal[]> {
   const deals: InsertLegoDeal[] = [];
   
   try {
-    const accessToken = await getVintedAccessToken();
-
-    // Make API request to Vinted
-    console.log("Making API request to Vinted...");
-    const response = await fetch("https://www.vinted.fr/api/v2/catalog/items?search_text=lego&catalog[]=5&order=newest_first", {
+    console.log("Scraping Vinted using direct API approach...");
+    
+    // Utiliser des headers génériques sans token
+    const headers = {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept": "application/json",
+      "Content-Type": "application/json"
+    };
+    
+    // Essayer d'abord de récupérer la page HTML pour simuler un comportement de navigateur
+    await fetch("https://www.vinted.fr/", {
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Authorization": `Bearer ${accessToken}`,
-        "Accept": "application/json",
-        "Content-Type": "application/json"
+        "User-Agent": headers["User-Agent"],
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
       }
     });
-
-    const data = await response.json() as VintedResponse;
-    console.log("Processing API response...");
-
-    if (data?.items) {
+    
+    // Utiliser l'API publique de Vinted qui ne requiert pas de token pour des recherches de base
+    console.log("Fetching LEGO items from Vinted public API...");
+    const searchUrl = "https://www.vinted.fr/api/v2/catalog/items?search_text=lego&per_page=50&catalog[]=5&order=newest_first";
+    
+    const response = await fetch(searchUrl, { headers });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch Vinted data: ${response.status} ${response.statusText}`);
+    }
+    
+    let data;
+    try {
+      data = await response.json() as VintedResponse;
+    } catch (error) {
+      console.error("Error parsing Vinted API response:", error);
+      return [];
+    }
+    
+    console.log("Processing Vinted items...");
+    
+    if (data?.items && Array.isArray(data.items)) {
       for (const item of data.items) {
         const title = item.title || '';
         const price = item.price || 0;
@@ -66,7 +61,7 @@ export async function scrapeVinted(): Promise<InsertLegoDeal[]> {
         
         // Extract set number from title using more permissive regex
         const setNumberMatch = title.match(/(?:LEGO|lego|Lego)?\s*(?:set|Set|SET)?\s*#?\s*(\d{4,6})/i) || 
-                             title.match(/(\d{4,6})\s*(?:LEGO|lego|Lego)/i);
+                              title.match(/(\d{4,6})\s*(?:LEGO|lego|Lego)/i);
         const setNumber = setNumberMatch ? setNumberMatch[1] : null;
         
         console.log(`Processing item: ${title} - ${price}€ - ${url} - Set number: ${setNumber}`);
@@ -85,6 +80,8 @@ export async function scrapeVinted(): Promise<InsertLegoDeal[]> {
           });
         }
       }
+    } else {
+      console.warn("No items found in Vinted API response or invalid response format");
     }
 
     console.log(`✅ Found ${deals.length} LEGO deals on Vinted`);
