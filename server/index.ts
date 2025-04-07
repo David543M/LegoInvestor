@@ -3,10 +3,19 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { connectDB } from "./storage/mongo";
 import dotenv from "dotenv";
+import cors from "cors";
 
 dotenv.config({ path: "./server/Database.env" }); // ensure .env is loaded
 
 export const app = express();
+
+// CORS configuration
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://lego-investor-client.onrender.com']
+    : ['http://localhost:3000'],
+  credentials: true
+}));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));

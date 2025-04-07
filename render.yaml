@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: lego-investor-api
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false # Will be set manually in Render dashboard
+    autoDeploy: true
+
+  - type: static
+    name: lego-investor-client
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist/client
+    autoDeploy: true
+    envVars:
+      - key: VITE_API_URL
+        value: https://lego-investor-api.onrender.com # Will be updated after API deployment 
