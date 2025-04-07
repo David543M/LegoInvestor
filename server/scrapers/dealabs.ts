@@ -21,23 +21,28 @@ export async function scrapeDealabs(): Promise<InsertLegoDeal[]> {
       '--disable-gpu'
     ],
     headless: true,
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || (process.env.CHROME_BIN || undefined)
   } : {
     headless: true
   };
   
   try {
+    console.log("Launching browser with options:", JSON.stringify(options, null, 2));
     const browser = await puppeteer.launch(options);
+    
+    console.log("Creating new page...");
     const page = await browser.newPage();
 
     // Set headers to mimic a real browser
+    await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+    await page.setViewport({ width: 1366, height: 768 });
     await page.setExtraHTTPHeaders({
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
       "Accept-Language": "en-US,en;q=0.5"
     });
 
     // Navigate to LEGO deals page
+    console.log("Navigating to Dealabs LEGO page...");
     await page.goto("https://www.dealabs.com/search?q=lego&category_id=9", {
       waitUntil: "networkidle2",
       timeout: 60000
@@ -47,9 +52,17 @@ export async function scrapeDealabs(): Promise<InsertLegoDeal[]> {
     console.log("Waiting for deals to load...");
     try {
       await page.waitForSelector('article', { timeout: 60000 });
+      console.log("Found article elements");
     } catch (error) {
       console.log("Timeout waiting for articles, trying alternative selector...");
-      await page.waitForSelector('.thread', { timeout: 60000 });
+      try {
+        await page.waitForSelector('.thread', { timeout: 30000 });
+        console.log("Found thread elements");
+      } catch (error) {
+        console.log("Taking screenshot to debug...");
+        await page.screenshot({ path: 'dealabs-debug.png' });
+        console.log("Failed to find any deal elements");
+      }
     }
 
     // Extract deals
