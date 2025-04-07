@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "tsx server/index.ts",
     "build:client": "vite build",
-    "build:server": "tsc --project tsconfig.server.json",
-    "build": "npm run build:client && npm run build:server && echo Build completed",
+    "build:server": "tsc --project tsconfig.server.json && echo 'Server build completed'",
+    "build": "npm run build:client && npm run build:server && echo 'Build completed'",
     "start": "node start.js",
     "check": "tsc",
     "db:push": "drizzle-kit push",

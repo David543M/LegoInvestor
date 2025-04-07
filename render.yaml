@@ -4,9 +4,15 @@ services:
     runtime: node
     buildCommand: |
       npm ci
-      npm run build
+      echo "Building client..."
+      npm run build:client
+      echo "Building server..."
+      npm run build:server
       echo "Build completed, listing files:"
+      ls -la
+      echo "Listing dist directory:"
       ls -la dist
+      echo "Listing dist/server directory:"
       ls -la dist/server || true
     startCommand: npm start
     envVars:
@@ -20,7 +26,7 @@ services:
 
   - type: static
     name: lego-investor-client
-    buildCommand: npm ci && npm run build
+    buildCommand: npm ci && npm run build:client
     staticPublishPath: ./dist/client
     autoDeploy: true
     envVars:
