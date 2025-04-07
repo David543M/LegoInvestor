@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { dealFilterSchema } from "@shared/schema";
+import { dealFilterSchema } from "../shared/schema";
 import { scheduleScrapingJobs } from "./scraper";
 
 export async function registerRoutes(app: Express): Promise<Server> {

@@ -1,5 +1,5 @@
 import puppeteer from 'puppeteer';
-import { InsertLegoDeal } from '@shared/schema';
+import { InsertLegoDeal } from '../../shared/schema';
 
 export async function scrapeAvenueDeLaBrique(): Promise<InsertLegoDeal[]> {
   console.log("Navigating to Avenue de la Brique...");

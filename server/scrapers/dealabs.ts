@@ -1,5 +1,5 @@
 import puppeteer from 'puppeteer';
-import { InsertLegoDeal, InsertLegoSet } from '@shared/schema';
+import { InsertLegoDeal, InsertLegoSet } from '../../shared/schema';
 import { storage } from '../storage';
 import * as cheerio from 'cheerio';
 
