@@ -4,7 +4,8 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "outDir": "dist/server",
-    "noEmit": false
+    "noEmit": false,
+    "allowImportingTsExtensions": false
   },
   "include": ["server/**/*", "api/**/*"],
   "exclude": ["node_modules", "dist", "client"]
