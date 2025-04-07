@@ -1,16 +1,33 @@
 import puppeteer from 'puppeteer';
+import * as cheerio from 'cheerio';
 import { InsertLegoDeal, InsertLegoSet } from '../../shared/schema.js';
 import { storage } from '../storage.js';
-import * as cheerio from 'cheerio';
 
 export async function scrapeDealabs(): Promise<InsertLegoDeal[]> {
   const deals: InsertLegoDeal[] = [];
   
+  console.log("Navigating to Dealabs...");
+  
+  // Configuration compatible avec Render
+  const options = process.env.NODE_ENV === 'production' ? {
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
+      '--no-first-run',
+      '--no-zygote',
+      '--single-process',
+      '--disable-gpu'
+    ],
+    headless: true,
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined
+  } : {
+    headless: true
+  };
+  
   try {
-    const browser = await puppeteer.launch({ 
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
+    const browser = await puppeteer.launch(options);
     const page = await browser.newPage();
 
     // Set headers to mimic a real browser
@@ -21,7 +38,6 @@ export async function scrapeDealabs(): Promise<InsertLegoDeal[]> {
     });
 
     // Navigate to LEGO deals page
-    console.log("Navigating to Dealabs...");
     await page.goto("https://www.dealabs.com/search?q=lego&category_id=9", {
       waitUntil: "networkidle2",
       timeout: 60000

@@ -12,25 +12,51 @@ interface VintedResponse {
   items: VintedItem[];
 }
 
-async function getVintedAccessToken() {
+async function getVintedAccessToken(): Promise<string> {
   console.log("📡 Getting Vinted access token...");
-  const browser = await puppeteer.launch({ headless: true });
-  const page = await browser.newPage();
+  
+  // Configuration compatible avec Render
+  const options = process.env.NODE_ENV === 'production' ? {
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
+      '--no-first-run',
+      '--no-zygote',
+      '--single-process',
+      '--disable-gpu'
+    ],
+    headless: true,
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+    timeout: 60000
+  } : {
+    headless: true,
+    timeout: 60000
+  };
+  
+  try {
+    const browser = await puppeteer.launch(options);
+    const page = await browser.newPage();
 
-  await page.goto("https://www.vinted.fr/", { 
-    waitUntil: "networkidle2",
-    timeout: 60000 // Augmenter le timeout à 60 secondes
-  });
-  const cookies = await page.cookies();
-  await browser.close();
+    await page.goto("https://www.vinted.fr/", { 
+      waitUntil: "networkidle2",
+      timeout: 60000 // Augmenter le timeout à 60 secondes
+    });
+    const cookies = await page.cookies();
+    await browser.close();
 
-  const accessTokenCookie = cookies.find(cookie => cookie.name === "access_token_web");
-  if (!accessTokenCookie) {
-    throw new Error("❌ Could not get access_token_web cookie");
+    const accessTokenCookie = cookies.find(cookie => cookie.name === "access_token_web");
+    if (!accessTokenCookie) {
+      throw new Error("❌ Could not get access_token_web cookie");
+    }
+
+    console.log("✅ Got Vinted access token");
+    return accessTokenCookie.value;
+  } catch (error) {
+    console.error('Error getting Vinted access token:', error);
+    throw error;
   }
-
-  console.log("✅ Got Vinted access token");
-  return accessTokenCookie.value;
 }
 
 export async function scrapeVinted(): Promise<InsertLegoDeal[]> {
