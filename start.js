@@ -1,52 +1,85 @@
 // Script de démarrage personnalisé pour Render
+import * as fs from 'fs';
+import * as path from 'path';
 import { execSync } from 'child_process';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 console.log('🔍 Vérification de l\'environnement de déploiement');
 console.log(`📂 Répertoire courant: ${process.cwd()}`);
-console.log('📑 Liste des fichiers dans le répertoire courant:');
-console.log(execSync('ls -la').toString());
+
+// Liste des fichiers
+try {
+  console.log('📑 Liste des fichiers dans le répertoire courant:');
+  const output = execSync('ls -la', { encoding: 'utf8' });
+  console.log(output);
+} catch (error) {
+  console.error('❌ Erreur lors de la liste des fichiers:', error);
+}
 
 // Vérifier si le dossier dist existe
 const distPath = path.join(process.cwd(), 'dist');
-if (fs.existsSync(distPath)) {
-  console.log('✅ Le dossier "dist" existe');
-  console.log('📑 Liste des fichiers dans dist:');
-  console.log(execSync(`ls -la ${distPath}`).toString());
+const distExists = fs.existsSync(distPath);
+console.log(`${distExists ? '✅' : '❌'} Le dossier "dist" existe${distExists ? '' : ' pas'}`);
 
-  // Vérifier si le dossier dist/server existe
-  const serverDistPath = path.join(distPath, 'server');
-  if (fs.existsSync(serverDistPath)) {
-    console.log('✅ Le dossier "dist/server" existe');
-    console.log('📑 Liste des fichiers dans dist/server:');
-    console.log(execSync(`ls -la ${serverDistPath}`).toString());
-
-    // Vérifier si le fichier index.js existe
-    const indexPath = path.join(serverDistPath, 'index.js');
-    if (fs.existsSync(indexPath)) {
-      console.log('✅ Le fichier "dist/server/index.js" existe');
-      console.log('🚀 Démarrage du serveur...');
-      
+if (distExists) {
+  // Liste des fichiers dans dist
+  try {
+    console.log('📑 Liste des fichiers dans dist:');
+    const output = execSync('ls -la dist', { encoding: 'utf8' });
+    console.log(output);
+  } catch (error) {
+    console.error('❌ Erreur lors de la liste des fichiers dans dist:', error);
+  }
+  
+  // Vérifie si le fichier server/index.js existe
+  const serverIndexPath = path.join(distPath, 'server', 'index.js');
+  const serverIndexExists = fs.existsSync(serverIndexPath);
+  console.log(`${serverIndexExists ? '✅' : '❌'} Le fichier "dist/server/index.js" existe${serverIndexExists ? '' : ' pas'}`);
+  
+  // Chercher d'autres emplacements possibles pour le fichier index.js
+  if (!serverIndexExists) {
+    // Chercher directement dans dist
+    const directIndexPath = path.join(distPath, 'index.js');
+    const directIndexExists = fs.existsSync(directIndexPath);
+    if (directIndexExists) {
+      console.log(`✅ Fichier trouvé à "dist/index.js" - Utilisation de ce fichier`);
       try {
-        // Utilisation de spawn pour exécuter le serveur
-        console.log(execSync(`node ${indexPath}`).toString());
+        require(directIndexPath);
+        process.exit(0);
       } catch (error) {
-        console.error('❌ Erreur lors du démarrage du serveur:', error);
-        process.exit(1);
+        console.error(`❌ Erreur lors de l'exécution de dist/index.js:`, error);
       }
     } else {
-      console.error('❌ Le fichier "dist/server/index.js" n\'existe pas');
-      process.exit(1);
+      // Recherche globale de index.js dans le dist
+      try {
+        console.log('🔍 Recherche de tous les fichiers index.js dans dist:');
+        const findOutput = execSync('find dist -name "index.js"', { encoding: 'utf8' });
+        console.log(findOutput);
+        
+        const indexFiles = findOutput.trim().split('\n').filter(f => f);
+        if (indexFiles.length > 0) {
+          console.log(`✅ Fichier index.js trouvé à "${indexFiles[0]}" - Utilisation de ce fichier`);
+          try {
+            require(path.join(process.cwd(), indexFiles[0]));
+            process.exit(0);
+          } catch (error) {
+            console.error(`❌ Erreur lors de l'exécution de ${indexFiles[0]}:`, error);
+          }
+        }
+      } catch (error) {
+        console.error('❌ Erreur lors de la recherche de index.js:', error);
+      }
     }
   } else {
-    console.error('❌ Le dossier "dist/server" n\'existe pas');
-    process.exit(1);
+    // Le fichier server/index.js existe, l'exécuter
+    try {
+      require(serverIndexPath);
+      process.exit(0);
+    } catch (error) {
+      console.error(`❌ Erreur lors de l'exécution de dist/server/index.js:`, error);
+    }
   }
-} else {
-  console.error('❌ Le dossier "dist" n\'existe pas');
-  process.exit(1);
-} 
+}
+
+// Si on arrive ici, c'est qu'aucun fichier n'a été trouvé ou n'a pu être exécuté
+console.error('❌ Impossible de trouver ou d\'exécuter le fichier index.js');
+process.exit(1); 
