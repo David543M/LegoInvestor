@@ -1,5 +1,5 @@
 services:
-  - name: lego-investor
+  - name: lego-investor-api
     type: web
     env: node
     buildCommand: |
@@ -46,10 +46,10 @@ services:
       # Installation de Chrome
       wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
       dpkg -i google-chrome-stable_current_amd64.deb
-      # Installation des dépendances Node.js et build
+      # Installation des dépendances Node.js et build du serveur uniquement
       npm install
-      npm run build
-    startCommand: npm start
+      npm run build:server
+    startCommand: npm run start:api
     envVars:
       - key: NODE_ENV
         value: production

@@ -1,6 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes.js";
-import { setupVite, serveStatic, log } from "./vite.js";
+import { setupVite, log } from "./vite.js";
 import { connectDB } from "./storage/mongo.js";
 import dotenv from "dotenv";
 import cors from "cors";
@@ -61,13 +61,12 @@ app.use((req, res, next) => {
       log(`❌ Error: ${message} (${status})`);
     });
 
+    // En mode production, on ne sert pas les fichiers statiques
     if (app.get("env") === "development") {
       await setupVite(app, server);
-    } else {
-      serveStatic(app);
     }
 
-    const PORT = 5000;
+    const PORT = process.env.PORT || 5000;
     server.listen(PORT, () => {
       log(`🚀 Server is running on port ${PORT}`);
     });
