@@ -1,0 +1,5 @@
+[33mcommit e6acfad85eadea06ff42c6b62c938bd75bd916c7[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m
+Author: David543M <davidmaze742@gmail.com>
+Date:   Mon Apr 7 12:57:58 2025 +0200
+
+    fix: correct TypeScript errors and update Vercel deployment configuration
