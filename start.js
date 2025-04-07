@@ -2,6 +2,11 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 console.log('🔍 Vérification de l\'environnement de déploiement');
 console.log(`📂 Répertoire courant: ${process.cwd()}`);
@@ -43,7 +48,7 @@ if (distExists) {
     if (directIndexExists) {
       console.log(`✅ Fichier trouvé à "dist/index.js" - Utilisation de ce fichier`);
       try {
-        require(directIndexPath);
+        await import(directIndexPath);
         process.exit(0);
       } catch (error) {
         console.error(`❌ Erreur lors de l'exécution de dist/index.js:`, error);
@@ -59,7 +64,7 @@ if (distExists) {
         if (indexFiles.length > 0) {
           console.log(`✅ Fichier index.js trouvé à "${indexFiles[0]}" - Utilisation de ce fichier`);
           try {
-            require(path.join(process.cwd(), indexFiles[0]));
+            await import(path.join(process.cwd(), indexFiles[0]));
             process.exit(0);
           } catch (error) {
             console.error(`❌ Erreur lors de l'exécution de ${indexFiles[0]}:`, error);
@@ -72,7 +77,8 @@ if (distExists) {
   } else {
     // Le fichier server/index.js existe, l'exécuter
     try {
-      require(serverIndexPath);
+      console.log('🚀 Démarrage du serveur...');
+      await import(serverIndexPath);
       process.exit(0);
     } catch (error) {
       console.error(`❌ Erreur lors de l'exécution de dist/server/index.js:`, error);
