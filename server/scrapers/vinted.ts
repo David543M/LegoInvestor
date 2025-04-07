@@ -12,9 +12,18 @@ interface VintedResponse {
   items: VintedItem[];
 }
 
-async function getVintedAccessToken() {
-  console.log("📡 Getting Vinted access token...");
-  const browser = await puppeteer.launch({ headless: true });
+export async function getVintedAccessToken(): Promise<string> {
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
+      '--disable-gpu',
+      '--window-size=1920x1080',
+    ]
+  });
   const page = await browser.newPage();
 
   await page.goto("https://www.vinted.fr/", { 
