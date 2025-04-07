@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { storage } from '../server/storage';
-import { dealFilterSchema } from '@shared/schema';
+import { dealFilterSchema } from '../shared/schema';
 import { connectDB } from '../server/storage/mongo';
 
 // Ensure MongoDB connection
