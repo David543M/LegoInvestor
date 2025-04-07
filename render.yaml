@@ -49,6 +49,9 @@ services:
       # Installation des dépendances Node.js et build du serveur uniquement
       npm install
       npm run build:server
+      # Copier les fichiers nécessaires
+      mkdir -p dist/server
+      cp -r server/Database.env dist/server/ || true
     startCommand: npm run start:api
     envVars:
       - key: NODE_ENV

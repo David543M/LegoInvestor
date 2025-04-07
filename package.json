@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx server/index.ts",
     "build:client": "vite build",
-    "build:server": "tsc --project tsconfig.server.json",
+    "build:server": "tsc --project tsconfig.server.json && cp server/Database.env dist/server/ || true",
     "build": "npm run build:client && npm run build:server",
     "start": "node dist/server/index.js",
     "start:api": "cross-env NODE_ENV=production node dist/server/index.js",
