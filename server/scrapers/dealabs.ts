@@ -1,48 +1,27 @@
 import puppeteer from 'puppeteer';
-import * as cheerio from 'cheerio';
 import { InsertLegoDeal, InsertLegoSet } from '../../shared/schema.js';
 import { storage } from '../storage.js';
+import * as cheerio from 'cheerio';
 
 export async function scrapeDealabs(): Promise<InsertLegoDeal[]> {
   const deals: InsertLegoDeal[] = [];
   
-  console.log("Navigating to Dealabs...");
-  
-  // Configuration compatible avec Render
-  const options = process.env.NODE_ENV === 'production' ? {
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-accelerated-2d-canvas',
-      '--no-first-run',
-      '--no-zygote',
-      '--single-process',
-      '--disable-gpu'
-    ],
-    headless: true,
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || (process.env.CHROME_BIN || undefined)
-  } : {
-    headless: true
-  };
-  
   try {
-    console.log("Launching browser with options:", JSON.stringify(options, null, 2));
-    const browser = await puppeteer.launch(options);
-    
-    console.log("Creating new page...");
+    const browser = await puppeteer.launch({ 
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
     const page = await browser.newPage();
 
     // Set headers to mimic a real browser
-    await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-    await page.setViewport({ width: 1366, height: 768 });
     await page.setExtraHTTPHeaders({
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
       "Accept-Language": "en-US,en;q=0.5"
     });
 
     // Navigate to LEGO deals page
-    console.log("Navigating to Dealabs LEGO page...");
+    console.log("Navigating to Dealabs...");
     await page.goto("https://www.dealabs.com/search?q=lego&category_id=9", {
       waitUntil: "networkidle2",
       timeout: 60000
@@ -52,17 +31,9 @@ export async function scrapeDealabs(): Promise<InsertLegoDeal[]> {
     console.log("Waiting for deals to load...");
     try {
       await page.waitForSelector('article', { timeout: 60000 });
-      console.log("Found article elements");
     } catch (error) {
       console.log("Timeout waiting for articles, trying alternative selector...");
-      try {
-        await page.waitForSelector('.thread', { timeout: 30000 });
-        console.log("Found thread elements");
-      } catch (error) {
-        console.log("Taking screenshot to debug...");
-        await page.screenshot({ path: 'dealabs-debug.png' });
-        console.log("Failed to find any deal elements");
-      }
+      await page.waitForSelector('.thread', { timeout: 60000 });
     }
 
     // Extract deals
