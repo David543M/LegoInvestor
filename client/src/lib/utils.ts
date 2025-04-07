@@ -60,9 +60,9 @@ export const formatDiscount = (percentage: number): string => {
 // Determine status color class
 export const getProfitabilityColorClass = (isProfitable: boolean, profitAmount: number) => {
   if (isProfitable) {
-    return profitAmount > 30 ? 'bg-profitable' : 'bg-moderate';
+    return profitAmount > 30 ? 'bg-lego-green text-white' : 'bg-lego-yellow text-black';
   }
-  return 'bg-not-profitable';
+  return 'bg-lego-red text-white';
 };
 
 // Determine profit indicator symbol
@@ -87,9 +87,9 @@ export const formatProfitAmount = (profitAmount: number): string => {
 // Get the profit amount class for coloring
 export const getProfitAmountClass = (profitAmount: number): string => {
   if (profitAmount > 30) {
-    return 'text-profitable';
+    return 'text-lego-green';
   } else if (profitAmount > 0) {
-    return 'text-moderate';
+    return 'text-lego-yellow';
   }
-  return 'text-not-profitable';
+  return 'text-lego-red';
 };

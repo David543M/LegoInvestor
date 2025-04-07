@@ -1,5 +1,7 @@
 import { InsertLegoSet, InsertLegoDeal } from "@shared/schema";
 import { storage } from "./storage";
+import { scrapeDealabs } from "./scrapers/dealabs";
+import { scrapeVinted } from "./scrapers/vinted";
 
 // This is a simplified scraper module that would normally use actual scraping libraries like Cheerio
 // In a real implementation, this would connect to external websites and extract LEGO deal information
@@ -8,21 +10,58 @@ export async function scrapeLegoDeals(): Promise<void> {
   console.log("Starting LEGO deal scraping...");
   
   try {
-    // In a real implementation, this would use Cheerio or similar to scrape websites
-    // For now, we'll just log that scraping would happen here
-    console.log("Scraping LEGO deals from Amazon, Walmart, Target, and LEGO Shop");
+    // Scrape deals from Dealabs and Vinted
+    console.log("Scraping LEGO deals from Dealabs and Vinted");
     
-    // Scraping logic would happen here...
-    // For example: scrapeAmazon(), scrapeWalmart(), scrapeTarget(), scrapeLegoShop()
+    const [dealabsDeals, vintedDeals] = await Promise.all([
+      scrapeDealabs(),
+      scrapeVinted()
+    ]);
+
+    // Combine all deals
+    const allDeals = [...dealabsDeals, ...vintedDeals];
     
-    // After scraping, we would check if the deals are profitable
-    // This involves comparing the current price to historical data or resale values
+    // Create LEGO sets for each unique set number
+    const uniqueSetNumbers = [...new Set(allDeals.map(deal => deal.setId))];
+    for (const setNumber of uniqueSetNumbers) {
+      const existingSet = await storage.getLegoSetBySetNumber(setNumber);
+      if (!existingSet) {
+        // Create a new LEGO set with minimal information
+        const newSet: InsertLegoSet = {
+          setNumber,
+          name: `LEGO ${setNumber}`, // Basic name, could be improved with additional scraping
+          theme: "Unknown", // Could be improved with additional scraping
+          retailPrice: 0, // Will be updated when we find a better price
+          imageUrl: "https://placeholder.com/lego.png",
+          pieceCount: 0,
+          yearReleased: new Date().getFullYear(),
+          avgRating: 0,
+          numReviews: 0
+        };
+        await storage.createLegoSet(newSet);
+      }
+    }
+    
+    // Analyze profitability of scraped LEGO deals
     console.log("Analyzing profitability of scraped LEGO deals");
     
-    // Update last checked timestamp for all deals
-    const allDeals = (await storage.getLegoDeals()).deals;
+    // For each deal, check if it's profitable by comparing with historical data
     for (const deal of allDeals) {
-      await storage.updateLegoDeal(deal.id, { lastChecked: new Date() });
+      const historicalDeals = await storage.getDealsBySetId(deal.setId);
+      const averagePrice = historicalDeals.length > 0 ?
+        historicalDeals.reduce((sum, d) => sum + d.currentPrice, 0) / historicalDeals.length :
+        deal.originalPrice;
+      
+      // A deal is considered profitable if it's at least 20% below the average price
+      const isProfitable = deal.currentPrice < averagePrice * 0.8;
+      const profitAmount = isProfitable ? averagePrice - deal.currentPrice : 0;
+      
+      // Update deal with profitability information
+      await storage.createLegoDeal({
+        ...deal,
+        isProfitable,
+        profitAmount
+      });
     }
     
     console.log("LEGO deal scraping completed successfully");

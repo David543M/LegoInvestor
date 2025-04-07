@@ -11,6 +11,10 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       colors: {
+        'lego-red': '#D01012',
+        'lego-yellow': '#FFD700',
+        'lego-blue': '#006DB7',
+        'lego-green': '#00AF4D',
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         card: {

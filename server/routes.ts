@@ -37,24 +37,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get available sources
+  app.get("/api/sources", async (req: Request, res: Response) => {
+    try {
+      const sources = await storage.getAvailableSources();
+      res.json(sources);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get available sources" });
+    }
+  });
+
   // Get a specific LEGO deal by ID
   app.get("/api/deals/:id", async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     const deal = await storage.getLegoDeal(id);
-    
+  
     if (!deal) {
       return res.status(404).json({ error: "Deal not found" });
     }
-    
-    const legoSet = await storage.getLegoSet(deal.setId);
-    
+  
+    const setId = Number(deal.setId);
+    if (isNaN(setId)) {
+      return res.status(400).json({ error: "Invalid LEGO set ID" });
+    }
+  
+    const legoSet = await storage.getLegoSet(setId);
+  
     if (!legoSet) {
       return res.status(404).json({ error: "LEGO set not found" });
     }
-    
+  
     res.json({
       ...deal,
-      legoSet
+      legoSet,
     });
   });
 
@@ -69,13 +84,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const legoSets = await storage.getLegoSets();
     const themes = [...new Set(legoSets.map(set => set.theme))].sort();
     res.json(themes);
-  });
-
-  // Get all available sources
-  app.get("/api/sources", async (_req: Request, res: Response) => {
-    const { deals } = await storage.getLegoDeals();
-    const sources = [...new Set(deals.map(deal => deal.source))].sort();
-    res.json(sources);
   });
 
   // Manually trigger a refresh of the deals (scrape)
