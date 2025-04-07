@@ -18,8 +18,11 @@ import { LegoSetModel } from '../models/legoSet.js';
 import LegoDealModel from '../models/legoDeal.js';
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
-dotenv.config({ path: "./server/Database.env" });
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(__dirname, "Database.env") });
 
 // ✅ Connexion MongoDB
 export async function connectDB() {
