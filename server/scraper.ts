@@ -1,7 +1,7 @@
-import { InsertLegoSet, InsertLegoDeal } from "../shared/schema";
-import { storage } from "./storage";
-import { scrapeDealabs } from "./scrapers/dealabs";
-import { scrapeVinted } from "./scrapers/vinted";
+import { InsertLegoSet, InsertLegoDeal } from '../shared/schema.js';
+import { storage } from './storage.js';
+import { scrapeDealabs } from './scrapers/dealabs.js';
+import { scrapeVinted } from './scrapers/vinted.js';
 
 // This is a simplified scraper module that would normally use actual scraping libraries like Cheerio
 // In a real implementation, this would connect to external websites and extract LEGO deal information

@@ -8,7 +8,7 @@ import type {
   LegoDealWithSet,
   User,
   InsertUser
-} from "../shared/schema";
+} from '../shared/schema.js';
 
 // Main storage interface
 export interface IStorage {
@@ -36,4 +36,4 @@ export interface IStorage {
 }
 
 // Re-export the dynamic implementation
-export { storage } from "./storage/index";
+export { storage } from './storage/index.js';

@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { LegoSet } from '../../shared/schema';
+import { LegoSet } from '../../shared/schema.js';
 
 const legoSetSchema = new mongoose.Schema<LegoSet>({
     setNumber: { type: String, required: true, unique: true },

@@ -1,5 +1,5 @@
 import puppeteer from 'puppeteer';
-import { InsertLegoDeal } from '../../shared/schema';
+import { InsertLegoDeal } from '../../shared/schema.js';
 import fetch from 'node-fetch';
 
 interface VintedItem {

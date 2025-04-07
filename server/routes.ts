@@ -1,8 +1,8 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
-import { dealFilterSchema } from "../shared/schema";
-import { scheduleScrapingJobs } from "./scraper";
+import { storage } from './storage.js';
+import { dealFilterSchema } from '../shared/schema.js';
+import { scheduleScrapingJobs } from './scraper.js';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize and start the scraper

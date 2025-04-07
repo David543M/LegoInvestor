@@ -1,6 +1,6 @@
-import { MongoStorage } from "./mongo";
-import { MemStorage } from "./memory";
-import type { IStorage } from "../storage";
+import { MongoStorage } from './mongo.js';
+import { MemStorage } from './memory.js';
+import type { IStorage } from '../storage.js';
 
 // Determine whether to use in-memory or MongoDB storage
 const useMemory = process.env.USE_MEM_STORAGE === "true";

@@ -1,4 +1,4 @@
-import { IStorage } from "../storage";
+import { IStorage } from '../storage.js';
 import { isValidObjectId } from "mongoose";
 
 import type {
@@ -11,11 +11,11 @@ import type {
   LegoDealWithSet,
   InsertUser,
   User
-} from "../../shared/schema";
+} from '../../shared/schema.js';
 
-import UserModel from "../models/user";
-import { LegoSetModel } from "../models/legoSet";
-import LegoDealModel from "../models/legoDeal";
+import UserModel from '../models/user.js';
+import { LegoSetModel } from '../models/legoSet.js';
+import LegoDealModel from '../models/legoDeal.js';
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 

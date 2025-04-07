@@ -1,6 +1,6 @@
 import express, { Request, Response, NextFunction } from "express";
-import { registerRoutes } from "../server/routes";
-import { connectDB } from "../server/storage/mongo";
+import { registerRoutes } from '../server/routes.js';
+import { connectDB } from '../server/storage/mongo.js';
 import dotenv from "dotenv";
 import cors from "cors";
 

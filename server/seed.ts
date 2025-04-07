@@ -1,8 +1,8 @@
 // server/seed.ts
-import { connectDB } from "./storage/mongo";
-import { scrapeLegoDeals } from "./scraper";
-import { LegoSetModel } from "./models/legoSet";
-import LegoDealModel from "./models/legoDeal";
+import { connectDB } from './storage/mongo.js';
+import { scrapeLegoDeals } from './scraper.js';
+import { LegoSetModel } from './models/legoSet.js';
+import LegoDealModel from './models/legoDeal.js';
 import type { CollectionInfo } from "mongodb";
 
 async function seed() {

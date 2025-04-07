@@ -1,6 +1,6 @@
 import puppeteer from 'puppeteer';
-import { InsertLegoDeal, InsertLegoSet } from '../../shared/schema';
-import { storage } from '../storage';
+import { InsertLegoDeal, InsertLegoSet } from '../../shared/schema.js';
+import { storage } from '../storage.js';
 import * as cheerio from 'cheerio';
 
 export async function scrapeDealabs(): Promise<InsertLegoDeal[]> {

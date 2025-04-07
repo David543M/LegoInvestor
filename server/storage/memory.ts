@@ -8,8 +8,8 @@ import type {
     LegoDealWithSet,
     User,
     InsertUser
-  } from "../../shared/schema";
-  import type { IStorage } from "../storage";
+  } from '../../shared/schema.js';
+  import type { IStorage } from '../storage.js';
 
   function sanitizeLegoSet(set: InsertLegoSet): InsertLegoSet {
     return {
