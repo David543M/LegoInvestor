@@ -1,7 +1,7 @@
 // server/seed.ts
 import { connectDB } from "./storage/mongo";
 import { scrapeLegoDeals } from "./scraper";
-import LegoSetModel from "./models/legoSet";
+import { LegoSetModel } from "./models/legoSet";
 import LegoDealModel from "./models/legoDeal";
 import type { CollectionInfo } from "mongodb";
 
