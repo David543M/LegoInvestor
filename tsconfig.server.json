@@ -1,15 +1,18 @@
 {
   "extends": "./tsconfig.json",
+  "include": ["server/**/*", "shared/**/*", "vite.config.ts"],
+  "exclude": ["client/**/*", "dist/**/*", "**/*.test.ts", "**/*.test.tsx"],
   "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "./dist",
     "target": "ES2020",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "outDir": "dist/server",
-    "noEmit": false,
+    "module": "ESNext",
+    "moduleResolution": "Node",
     "allowImportingTsExtensions": false,
-    "esModuleInterop": true,
-    "skipLibCheck": true
-  },
-  "include": ["server/**/*", "api/**/*", "shared/**/*"],
-  "exclude": ["node_modules", "dist", "client"]
+    "noEmit": false,
+    "declaration": true,
+    "sourceMap": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true
+  }
 } 

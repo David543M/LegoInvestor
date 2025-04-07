@@ -1,4 +1,4 @@
-import { InsertLegoSet, InsertLegoDeal } from "@shared/schema";
+import { InsertLegoSet, InsertLegoDeal } from "../shared/schema";
 import { storage } from "./storage";
 import { scrapeDealabs } from "./scrapers/dealabs";
 import { scrapeVinted } from "./scrapers/vinted";

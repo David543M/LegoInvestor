@@ -1,6 +1,6 @@
 services:
-  - type: web
-    name: lego-investor-api
+  - name: lego-investor
+    type: web
     env: node
     buildCommand: npm install && npm run build
     startCommand: npm start
@@ -8,8 +8,8 @@ services:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        sync: false # Will be set manually in Render dashboard
-    autoDeploy: true
+        sync: false # Ceci indique qu'il faut définir cette variable manuellement
+    autoDeploy: true # Déploiement automatique lors des push sur la branche principale
 
   - type: static
     name: lego-investor-client

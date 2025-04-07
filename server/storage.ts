@@ -8,7 +8,7 @@ import type {
   LegoDealWithSet,
   User,
   InsertUser
-} from "@shared/schema";
+} from "../shared/schema";
 
 // Main storage interface
 export interface IStorage {

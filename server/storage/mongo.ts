@@ -11,7 +11,7 @@ import type {
   LegoDealWithSet,
   InsertUser,
   User
-} from "@shared/schema";
+} from "../../shared/schema";
 
 import UserModel from "../models/user";
 import { LegoSetModel } from "../models/legoSet";
